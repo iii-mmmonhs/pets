@@ -26,8 +26,7 @@
 super_resolution_project/
 ├── README.md
 ├── requirements.txt
-├── notebooks/
-│   └── demo_and_visualization.ipynb    # Ноутбук с кодом и визуализацией результата
+├── visualization.ipynb                 # Ноутбук с визуализацией результата
 ├── src/                                # Основной код
 │   ├── config.py                       # Пути исходного датасета
 │   ├── model.py                        # Определение архитектуры модели
