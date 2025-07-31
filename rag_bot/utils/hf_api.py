@@ -8,6 +8,7 @@ logger = logging.getLogger(__name__)
 HF_TOKEN = os.getenv("HF_API_TOKEN")
 RAG_API_URL = os.getenv("RAG_API_URL")
 
+# Заголовки для запроса к Hugging Face Inference API
 headers = {
     "Authorization": f"Bearer {HF_TOKEN}",
     "Content-Type": "application/json"
@@ -15,6 +16,18 @@ headers = {
 
 logger.info("Вызов API")
 def call_api(question: str, context: str) -> str:
+    """
+    Отправляет запрос к языковой модели через Hugging Face Inference API для генерации ответа.
+
+    Args:
+        question (str): Вопрос от пользователя
+        context (str): Контекст из документации, найденный ретривером
+
+    Returns:
+        str: Сгенерированный ответ или сообщение об ошибке
+
+    NB: Ожидается, что модель поддерживает chat-формат (например, Qwen, Llama-2-chat и т.п.)
+    """
 
     prompt = f"""<|system|>
 Ты — помощник по IBM SPSS. Старайся отвечать на основе контекста.
@@ -29,6 +42,7 @@ def call_api(question: str, context: str) -> str:
 Вопрос:
 {question}"""
 
+    # Тело запроса
     payload = {
         "inputs": prompt,
         "parameters": {

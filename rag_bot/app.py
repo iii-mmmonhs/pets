@@ -16,14 +16,24 @@ os.makedirs("./data/embeddings", exist_ok=True)
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Количество  релевантных чанков в качестве контекста
 CONTEXT_CHUNKS_NUM = 5
 
 class RAGBot:
+    """
+    Класс RAGBot:    
+    - Загрузка модели эмбеддингов
+    - Парсинг и хранение текста из PDF
+    - Построение векторного хранилища
+    - Поиск релевантных фрагментов
+    - Генерация ответов на вопросы
+    
+    """
     def __init__(self):
-        self.model = None
-        self.chunks = []
-        self.index = None
-        self.is_initialized = False
+        self.model = None        # Модель для эмбеддингов
+        self.chunks = []         # Список текстовых чанков из PDF
+        self.index = None        # Векторный индекс
+        self.is_initialized = False  # Флаг инициализации
 
     def setup(self):
         logger.info("Инициализация")
@@ -37,6 +47,19 @@ class RAGBot:
         self.is_initialized = True
 
     def answer_question(self, question: str) -> str:
+        """
+        Получение запроса и возвращение ответа:
+    
+        1. Поиск релевантных чанков через векторный поиск
+        2. Формирование контекста
+        3. Генерация ответа с помощью LLM
+        
+        Args:
+            question (str): Вопрос от пользователя
+            
+        Returns:
+            str: Ответ на вопрос или сообщение об ошибке
+        """
         logger.info(f"Получен вопрос: {question}")
         try:
             if self.model is None:
@@ -64,11 +87,23 @@ class RAGBot:
 bot = RAGBot()
 
 def respond(message, chat_history):
+    """
+    Функция для Gradio ChatInterface: показывает промежуточное сообщение "Ищу ответ", затем возвращает сгенерированный ответ.
+    
+    Args:
+        message (str): Сообщение от пользователя
+        chat_history (List): История чата (пока не используется)
+        
+    Yields:
+        str: Промежуточное сообщение и финальный ответ
+    """
     yield "Ищу ответ"
     sleep(1)
     result = bot.answer_question(message)
     yield f"{result}"
 
+
+# Интерфейс
 with gr.Blocks() as demo:
     gr.ChatInterface(
         respond,
@@ -83,6 +118,7 @@ with gr.Blocks() as demo:
         ]
     )
 
+# Запуск приложения
 if __name__ == "__main__":
     logger.info("Gradio готов к запуску")
     bot.setup()
