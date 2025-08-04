@@ -1,73 +1,50 @@
 import os
-import requests
+from openai import OpenAI
 import logging
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 HF_TOKEN = os.getenv("HF_API_TOKEN")
-RAG_API_URL = os.getenv("RAG_API_URL")
+MODEL_NAME = os.getenv("MODEL_NAME")
 
-# Заголовки для запроса к Hugging Face Inference API
-headers = {
-    "Authorization": f"Bearer {HF_TOKEN}",
-    "Content-Type": "application/json"
-}
+base_url = "https://router.huggingface.co/v1"
 
-logger.info("Вызов API")
+client = OpenAI(
+    base_url=base_url,
+    api_key=HF_TOKEN
+)
+
+logger.info("Клиент OpenAI инициализирован")
+
 def call_api(question: str, context: str) -> str:
-    """
-    Отправляет запрос к языковой модели через Hugging Face Inference API для генерации ответа.
-
-    Args:
-        question (str): Вопрос от пользователя
-        context (str): Контекст из документации, найденный ретривером
-
-    Returns:
-        str: Сгенерированный ответ или сообщение об ошибке
-
-    NB: Ожидается, что модель поддерживает chat-формат (например, Qwen, Llama-2-chat и т.п.)
-    """
-
-    prompt = f"""<|system|>
-Ты — помощник по IBM SPSS. Старайся отвечать на основе контекста.
-
-Если ответ найден в контексте — дай точный ответ.
-Если точной информации нет, ответь на основе общих знаний "
-
-<|user|>
-Контекст:
-{context}
-
-Вопрос:
-{question}"""
-
-    # Тело запроса
-    payload = {
-        "inputs": prompt,
-        "parameters": {
-            "max_new_tokens": 512,
-            "temperature": 0.3,
-            "do_sample": True,
-            "return_full_text": False
-        }
-    }
-
-    logger.info("Отправляем запрос к модели...")
-
+    logger.info("Отправляем запрос к модели через OpenAI-совместимый API")
+    
     try:
-        response = requests.post(RAG_API_URL, headers=headers, json=payload)
-    except requests.exceptions.RequestException as e:
-        logger.error(f"Ошибка при обращении к API: {e}")
-        return "Не удалось получить ответ от модели."
+        completion = client.chat.completions.create(
+            model=MODEL_NAME,
+            messages=[
+                {
+                    "role": "system",
+                    "content": "Ты — помощник по IBM SPSS. Если вопрос касается функционала из контекста — отвечай на его основе. Если вопрос общий (например, 'Что такое SPSS?') — можешь ответить, опираясь на общие знания."
+                },
+                {
+                    "role": "user",
+                    "content": f"Контекст:\n{context}\n\nВопрос:\n{question}"
+                }
+            ],
+            max_tokens=512,
+            temperature=0.3
+        )
 
-    try:
-        generated_text = response.json()[0]["generated_text"].strip()
-    except (KeyError, IndexError):
-        logger.warning("Неверный формат ответа от модели")
-        return "Ошибка получения ответа."
+        answer = completion.choices[0].message.content.strip()
+        logger.info(f"Сгенерированный ответ: '{answer}'")
+        
+        if not answer:
+            return "Не удалось сгенерировать ответ."
+            
+        return answer
 
-    if not generated_text or generated_text == "Информация не найдена.":
-        return "Информация не найдена."
-
-    return generated_text
+    except Exception as e:
+        logger.error(f"Ошибка при вызове API: {e}", exc_info=True)
+        return f"Ошибка при генерации ответа: {str(e)}"
