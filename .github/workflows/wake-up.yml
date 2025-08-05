@@ -1,0 +1,23 @@
+name: Keep HF Space Awake
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '*/45 * * * *'
+
+jobs:
+  wake-space:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: 🌐 Ping Hugging Face Space
+        run: |
+          curl -fsSL --max-time 30 \
+            -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) Wake-Up-Bot" \
+            "https://huggingface.co/spaces/iii-mmmonhs/rag_bot" \
+            && echo "Space разбужен" \
+            || echo "Ответ получен с ошибкой"
+
+      - name: Log time
+        run: echo "Запрос отправлен в $(date --utc)"
